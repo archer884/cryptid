@@ -84,13 +84,22 @@ impl<'words> Solver<'words> {
     }
 
     fn solve<'a>(&self, phrase: &'a Phrase) -> impl Iterator<Item = String> + 'a {
+        use std::cmp::Reverse;
+
         // FIXME: this part is only going to work for "properly" formatted cryptograms--which is
         // to say the kind that don't have punctuation or other non-letter characters.
         //
         // It probably also looks weird to use a VecDeque instead of just a Vec, but the fact is
         // I don't get why David is popping from the front ("shift?" in his code) and I don't
         // want to change it.
-        let encrypted_words: VecDeque<_> = phrase.as_ref().split_whitespace().collect();
+        let encrypted_words = {
+            let mut encrypted_words: Vec<_> = phrase.as_ref().split_whitespace().collect();
+            encrypted_words.sort();
+            encrypted_words.dedup();
+            encrypted_words.sort_by_key(|word| word.len());
+            encrypted_words.into()
+        };
+
         let letter_mappings = self.guess(FxHashMap::default(), &encrypted_words);
 
         letter_mappings.into_iter().map(move |mapping| {
