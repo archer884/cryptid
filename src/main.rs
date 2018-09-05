@@ -5,7 +5,6 @@ extern crate fxhash;
 extern crate stopwatch;
 
 use fxhash::{FxHashMap, FxHashSet};
-use std::collections::VecDeque;
 
 macro_rules! time {
     ($e:expr) => {{
@@ -109,10 +108,6 @@ impl<'words> Solver<'words> {
     fn solve<'a>(&self, phrase: &'a Phrase) -> impl Iterator<Item = String> + 'a {
         // FIXME: this part is only going to work for "properly" formatted cryptograms--which is
         // to say the kind that don't have punctuation or other non-letter characters.
-        //
-        // It probably also looks weird to use a VecDeque instead of just a Vec, but the fact is
-        // I don't get why David is popping from the front ("shift?" in his code) and I don't
-        // want to change it.
         let encrypted_words = {
             let mut encrypted_words: FxHashSet<_> = phrase.as_ref().split_whitespace().collect();
             encrypted_words.into_iter().collect()
@@ -129,24 +124,26 @@ impl<'words> Solver<'words> {
         })
     }
 
+    // FIXME: in this method, we calculate candidate matches for the target word twice when we
+    // could get away with doing it just once and reduce the amount of work done by some 
+    // minor degree. >.>
     fn guess(
         &self,
         mut mapping: FxHashMap<u8, u8>,
-        encrypted_words: &VecDeque<&str>,
+        encrypted_words: &Vec<&str>,
     ) -> Vec<FxHashMap<u8, u8>> {
-        let mut encrypted_words: VecDeque<_> = {
-            let mut encrypted_words: Vec<_> = encrypted_words.into_iter().cloned().collect();
-            encrypted_words.sort_by_key(|word| self.find_candidate_matches(word, &mapping).len());
-            encrypted_words.into()
-        };
+        use std::cmp::Reverse;
 
-        match encrypted_words.pop_front() {
+        let mut encrypted_words: Vec<_> = encrypted_words.into_iter().cloned().collect();
+        encrypted_words.sort_by_key(|word| Reverse(self.find_candidate_matches(word, &mapping).len()));
+
+        match encrypted_words.pop() {
             None => vec![mapping],
             Some(encrypted_word) => {
                 let candidate_words = self.find_candidate_matches(encrypted_word, &mut mapping);
                 let mut candidate_mappings = FxHashMap::default();
 
-                for word in &candidate_words {
+                for &word in &candidate_words {
                     if let Some(mapping) = self.try_extend_mapping(word, encrypted_word, &mapping) {
                         candidate_mappings.insert(word, mapping);
                     }
