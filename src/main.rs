@@ -73,7 +73,7 @@ impl<'words> Solver<'words> {
 
     // Never used a clone-on-write pointer like this before...
     //
-    // Honestly, all things considered, this works amazingly well. Rust is even able to guess the 
+    // Honestly, all things considered, this works amazingly well. Rust is even able to guess the
     // appropriate default type!
     fn words_by_character_and_index(&self, u: u8, idx: usize) -> Cow<FxHashSet<&'words str>> {
         self.words_by_character_and_index
@@ -110,7 +110,7 @@ impl<'words> Solver<'words> {
     }
 
     // According to David, this is where the magic happens. I think that means this is the method
-    // I'm never gonna be able to port. Unanswered questions include: does the hash map here need 
+    // I'm never gonna be able to port. Unanswered questions include: does the hash map here need
     // be passed by unique reference or by value? I guess the same question applies above.
     fn guess(
         &self,
@@ -122,7 +122,7 @@ impl<'words> Solver<'words> {
             None => vec![mapping],
             Some(encrypted_word) => {
                 let words = self.find_candidate_matches(encrypted_word, &mut mapping);
-                
+
                 unimplemented!("Pick up at line 51");
             }
         }
@@ -133,7 +133,7 @@ impl<'words> Solver<'words> {
     // method should be eating the hash map or referencing it.
     fn find_candidate_matches(&self, word: &str, mapping: &FxHashMap<u8, u8>) -> FxHashSet<&'words str> {
         let mut candidates = self.words_by_length(word.len()).into_owned();
-        
+
         for (idx, u) in word.bytes().enumerate() {
             if let Some(&mapped_char) = mapping.get(&u) {
                 let other_candidates = self.words_by_character_and_index(mapped_char, idx);
@@ -142,7 +142,7 @@ impl<'words> Solver<'words> {
         }
 
         // It strikes me that David's code might be paring down the original candidate set rather
-        // than a copy of it, which is what I have here. I don't know enough about his 
+        // than a copy of it, which is what I have here. I don't know enough about his
         // implementation to guess whether or not that is intended or correct or whatever.
         candidates
     }

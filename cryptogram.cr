@@ -6,7 +6,7 @@ class CryptogramSolver
     @words = File.read_lines(file_path)
     build_indices
   end
-  
+
   def build_indices
     @words.each do |word|
       @word_length_to_words_map[word.size] = Set(String).new unless @word_length_to_words_map.has_key?(word.size)
@@ -86,7 +86,7 @@ class CryptogramSolver
       mapped_char = word_specific_letter_mapping[encrypted_char]?
       return nil if mapped_char && mapped_char != word[index]
       # return nil if word_specific_letter_mapping.has_key?(encrypted_char) && word_specific_letter_mapping[encrypted_char] != word[index]
-      
+
       return nil if letter_mapping.has_key?(encrypted_char) && letter_mapping[encrypted_char] != word[index]
 
       word_specific_letter_mapping[encrypted_char] = word[index]
@@ -103,14 +103,14 @@ def gen_cryptogram(input)
   words = input.split(" ")
   map = ('a'..'z').to_a.zip(('a'..'z').to_a.shuffle).to_h
   words.map {|word| word.each_char.map {|c| map[c]}.join }.join(" ")
-end  
+end
 
 def main
   file_path = ARGV.first
 
   t1 = Time.now
   solver = CryptogramSolver.new(file_path)
-  
+
   # phrase = "NIJBVO OBJO YAVWJB ABVB"    # "insert test phrase here"
   phrase = gen_cryptogram("insert test phrase here")
   # phrase = gen_cryptogram("most food is yummy")
