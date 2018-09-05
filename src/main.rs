@@ -5,8 +5,8 @@ extern crate fxhash;
 extern crate stopwatch;
 
 use fxhash::{FxHashMap, FxHashSet};
-use std::collections::VecDeque;
 use std::borrow::Cow;
+use std::collections::VecDeque;
 
 macro_rules! time {
     ($e:expr) => {{
@@ -90,23 +90,27 @@ impl<'words> Solver<'words> {
             .unwrap_or_default()
     }
 
-    fn solve(&self, phrase: &Phrase) -> Vec<String> {
-        let phrase = phrase.as_ref();
-
+    fn solve<'a>(&self, phrase: &'a Phrase) -> impl Iterator<Item = String> + 'a {
         // FIXME: this part is only going to work for "properly" formatted cryptograms--which is
         // to say the kind that don't have punctuation or other non-letter characters.
         //
         // It probably also looks weird to use a VecDeque instead of just a Vec, but the fact is
         // I don't get why David is popping from the front ("shift?" in his code) and I don't
         // want to change it.
-        let encrypted_words: VecDeque<_> = phrase.split_whitespace().collect();
+        let encrypted_words: VecDeque<_> = phrase.as_ref().split_whitespace().collect();
 
         // It looks strange to consume this vector here, but that's intentional. David is
         // definitely eating this vector. He's also cloning bits and pieces of it across stack
         // frames, so I guess just be happy these are string slices instead of strings.
-        let letter_mappings = self.guess(FxHashMap::default(), encrypted_words);
+        let letter_mappings = self.guess(FxHashMap::default(), &encrypted_words);
 
-        unimplemented!()
+        letter_mappings.into_iter().map(move |mapping| {
+            phrase
+                .as_ref()
+                .bytes()
+                .map(|u| mapping.get(&u).map(|&u| u).unwrap_or(u) as char)
+                .collect()
+        })
     }
 
     // According to David, this is where the magic happens. I think that means this is the method
@@ -115,23 +119,34 @@ impl<'words> Solver<'words> {
     fn guess(
         &self,
         mut mapping: FxHashMap<u8, u8>,
-        encrypted_words: VecDeque<&str>,
+        encrypted_words: &VecDeque<&str>,
     ) -> Vec<FxHashMap<u8, u8>> {
         let mut encrypted_words = encrypted_words.clone();
         match encrypted_words.pop_front() {
             None => vec![mapping],
             Some(encrypted_word) => {
-                let words = self.find_candidate_matches(encrypted_word, &mut mapping);
+                let candidate_words = self.find_candidate_matches(encrypted_word, &mut mapping);
+                let mut candidate_mappings = FxHashMap::default();
 
-                unimplemented!("Pick up at line 51");
+                for word in &candidate_words {
+                    if let Some(mapping) = self.try_extend_mapping(word, encrypted_word, &mapping) {
+                        candidate_mappings.insert(word, mapping);
+                    }
+                }
+
+                candidate_mappings
+                    .into_iter()
+                    .flat_map(move |(_, mapping)| self.guess(mapping, &encrypted_words))
+                    .collect()
             }
         }
     }
 
-    // FIXME: I can only guess what this method does because the syntax for this isn't exactly
-    // self-evident in the original code. In particular, at this point, I'm not sure if this
-    // method should be eating the hash map or referencing it.
-    fn find_candidate_matches(&self, word: &str, mapping: &FxHashMap<u8, u8>) -> FxHashSet<&'words str> {
+    fn find_candidate_matches(
+        &self,
+        word: &str,
+        mapping: &FxHashMap<u8, u8>,
+    ) -> FxHashSet<&'words str> {
         let mut candidates = self.words_by_length(word.len()).into_owned();
 
         for (idx, u) in word.bytes().enumerate() {
@@ -141,10 +156,41 @@ impl<'words> Solver<'words> {
             }
         }
 
-        // It strikes me that David's code might be paring down the original candidate set rather
-        // than a copy of it, which is what I have here. I don't know enough about his
-        // implementation to guess whether or not that is intended or correct or whatever.
         candidates
+    }
+
+    /// Attempts to extend mapping based on an encrypted word and a candidate solution.
+    fn try_extend_mapping(
+        &self,
+        word: &str,
+        encrypted_word: &str,
+        mapping: &FxHashMap<u8, u8>,
+    ) -> Option<FxHashMap<u8, u8>> {
+        let mut new_mapping = FxHashMap::default();
+
+        for (u_encoded, u_decoded) in encrypted_word.bytes().zip(word.bytes()) {
+            if let Some(&mapped_char) = new_mapping.get(&u_encoded) {
+                if mapped_char != u_decoded {
+                    return None;
+                }
+            }
+
+            if let Some(&mapped_char) = mapping.get(&u_encoded) {
+                if mapped_char != u_decoded {
+                    return None;
+                }
+            }
+
+            new_mapping.insert(u_encoded, u_decoded);
+        }
+
+        mapping.iter().for_each(|(&k, &v)| {
+            // This weirdness should avoid me re-inserting anything already in the map, which will
+            // in turn avoid overwriting anything by mistake. Although I think that should be
+            // impossible because of the code above.
+            new_mapping.entry(k).or_insert(v);
+        });
+        Some(new_mapping)
     }
 }
 
@@ -161,12 +207,13 @@ fn main() {
     println!("Mapping time: {:?}", elapsed); // ~300 milliseconds
 
     for phrase in env::args().skip(1).filter_map(Phrase::from_str) {
-        let (elapsed, solutions) = time!(solver.solve(&phrase));
+        let (elapsed, mut solutions) = time!(solver.solve(&phrase).collect::<Vec<_>>());
+        solutions.sort();
+
         for solution in solutions {
             println!("{}", solution);
         }
+
         println!("Elapsed: {:?}", elapsed);
     }
-
-    println!("Hello, world!");
 }
