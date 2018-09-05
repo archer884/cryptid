@@ -98,10 +98,6 @@ impl<'words> Solver<'words> {
         // I don't get why David is popping from the front ("shift?" in his code) and I don't
         // want to change it.
         let encrypted_words: VecDeque<_> = phrase.as_ref().split_whitespace().collect();
-
-        // It looks strange to consume this vector here, but that's intentional. David is
-        // definitely eating this vector. He's also cloning bits and pieces of it across stack
-        // frames, so I guess just be happy these are string slices instead of strings.
         let letter_mappings = self.guess(FxHashMap::default(), &encrypted_words);
 
         letter_mappings.into_iter().map(move |mapping| {
@@ -113,9 +109,6 @@ impl<'words> Solver<'words> {
         })
     }
 
-    // According to David, this is where the magic happens. I think that means this is the method
-    // I'm never gonna be able to port. Unanswered questions include: does the hash map here need
-    // be passed by unique reference or by value? I guess the same question applies above.
     fn guess(
         &self,
         mut mapping: FxHashMap<u8, u8>,
