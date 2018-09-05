@@ -40,9 +40,30 @@ impl AsRef<str> for Phrase {
     }
 }
 
+#[derive(Debug, Eq, PartialEq, Hash)]
+struct Pattern(Vec<u8>);
+
+impl Pattern {
+    fn from_str(s: &str) -> Self {
+        let mut next_symbol = 0;
+        let mut symbols = Vec::new();
+        let mut symbol_map = FxHashMap::default();
+
+        for u in s.bytes() {
+            symbols.push(*symbol_map.entry(u).or_insert_with(|| {
+                let insert = next_symbol;
+                next_symbol += 1;
+                insert
+            }));
+        }
+
+        Pattern(symbols)
+    }
+}
+
 #[derive(Debug, Default)]
 struct Solver<'words> {
-    words_by_length: FxHashMap<usize, FxHashSet<&'words str>>,
+    words_by_pattern: FxHashMap<Pattern, FxHashSet<&'words str>>,
     words_by_character_and_index: FxHashMap<usize, FxHashMap<u8, FxHashSet<&'words str>>>,
 }
 
@@ -52,10 +73,11 @@ impl<'words> Solver<'words> {
 
         for &word in words {
             solver
-                .words_by_length
-                .entry(word.len())
+                .words_by_pattern
+                .entry(Pattern::from_str(word))
                 .or_default()
                 .insert(word);
+
             for (idx, u) in word.bytes().enumerate() {
                 solver
                     .words_by_character_and_index
@@ -70,11 +92,9 @@ impl<'words> Solver<'words> {
         solver
     }
 
-    fn words_by_length(&self, len: usize) -> FxHashSet<&'words str> {
-        self.words_by_length
-            .get(&len)
-            .map(|x| x.clone())
-            .unwrap_or_default()
+    fn words_by_pattern(&self, word: &str) -> FxHashSet<&'words str> {
+        let pattern = Pattern::from_str(word);
+        self.words_by_pattern.get(&pattern).map(|x| x.clone()).unwrap_or_default()
     }
 
     fn words_by_character_and_index(&self, u: u8, idx: usize) -> Option<&FxHashSet<&'words str>> {
@@ -84,8 +104,6 @@ impl<'words> Solver<'words> {
     }
 
     fn solve<'a>(&self, phrase: &'a Phrase) -> impl Iterator<Item = String> + 'a {
-        use std::cmp::Reverse;
-
         // FIXME: this part is only going to work for "properly" formatted cryptograms--which is
         // to say the kind that don't have punctuation or other non-letter characters.
         //
@@ -142,11 +160,12 @@ impl<'words> Solver<'words> {
         word: &str,
         mapping: &FxHashMap<u8, u8>,
     ) -> FxHashSet<&'words str> {
-        let mut candidates = self.words_by_length(word.len());
+        let mut candidates = self.words_by_pattern(word);
 
         for (idx, u) in word.bytes().enumerate() {
             if let Some(&mapped_char) = mapping.get(&u) {
-                if let Some(other_candidates) = self.words_by_character_and_index(mapped_char, idx) {
+                if let Some(other_candidates) = self.words_by_character_and_index(mapped_char, idx)
+                {
                     candidates.retain(|x| other_candidates.contains(x));
                 }
             }
