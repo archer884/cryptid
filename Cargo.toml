@@ -1,0 +1,8 @@
+[package]
+name = "cryptid"
+version = "0.1.0"
+authors = ["J/A <archer884@gmail.com>"]
+
+[dependencies]
+fxhash = "0.2"
+stopwatch = "0.0"
