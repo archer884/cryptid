@@ -94,7 +94,10 @@ impl<'words> Solver<'words> {
 
     fn words_by_pattern(&self, word: &str) -> FxHashSet<&'words str> {
         let pattern = Pattern::from_str(word);
-        self.words_by_pattern.get(&pattern).map(|x| x.clone()).unwrap_or_default()
+        self.words_by_pattern
+            .get(&pattern)
+            .map(|x| x.clone())
+            .unwrap_or_default()
     }
 
     fn words_by_character_and_index(&self, u: u8, idx: usize) -> Option<&FxHashSet<&'words str>> {
@@ -205,6 +208,13 @@ impl<'words> Solver<'words> {
             // impossible because of the code above.
             new_mapping.entry(k).or_insert(v);
         });
+
+        // Test for mistakenly mapping multiple characters to one character.
+        let value_set: FxHashSet<u8> = new_mapping.values().cloned().collect();
+        if value_set.len() != new_mapping.len() {
+            return None;
+        }
+
         Some(new_mapping)
     }
 }
