@@ -5,7 +5,6 @@ extern crate fxhash;
 extern crate stopwatch;
 
 use fxhash::{FxHashMap, FxHashSet};
-use std::borrow::Cow;
 use std::collections::VecDeque;
 
 macro_rules! time {
@@ -71,23 +70,17 @@ impl<'words> Solver<'words> {
         solver
     }
 
-    // Never used a clone-on-write pointer like this before...
-    //
-    // Honestly, all things considered, this works amazingly well. Rust is even able to guess the
-    // appropriate default type!
-    fn words_by_character_and_index(&self, u: u8, idx: usize) -> Cow<FxHashSet<&'words str>> {
-        self.words_by_character_and_index
-            .get(&idx)
-            .and_then(|by_char| by_char.get(&u))
-            .map(Cow::Borrowed)
+    fn words_by_length(&self, len: usize) -> FxHashSet<&'words str> {
+        self.words_by_length
+            .get(&len)
+            .map(|x| x.clone())
             .unwrap_or_default()
     }
 
-    fn words_by_length(&self, len: usize) -> Cow<FxHashSet<&'words str>> {
-        self.words_by_length
-            .get(&len)
-            .map(Cow::Borrowed)
-            .unwrap_or_default()
+    fn words_by_character_and_index(&self, u: u8, idx: usize) -> Option<&FxHashSet<&'words str>> {
+        self.words_by_character_and_index
+            .get(&idx)
+            .and_then(|by_char| by_char.get(&u))
     }
 
     fn solve<'a>(&self, phrase: &'a Phrase) -> impl Iterator<Item = String> + 'a {
@@ -140,12 +133,13 @@ impl<'words> Solver<'words> {
         word: &str,
         mapping: &FxHashMap<u8, u8>,
     ) -> FxHashSet<&'words str> {
-        let mut candidates = self.words_by_length(word.len()).into_owned();
+        let mut candidates = self.words_by_length(word.len());
 
         for (idx, u) in word.bytes().enumerate() {
             if let Some(&mapped_char) = mapping.get(&u) {
-                let other_candidates = self.words_by_character_and_index(mapped_char, idx);
-                candidates.retain(|x| other_candidates.contains(x));
+                if let Some(other_candidates) = self.words_by_character_and_index(mapped_char, idx) {
+                    candidates.retain(|x| other_candidates.contains(x));
+                }
             }
         }
 
