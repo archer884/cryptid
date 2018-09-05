@@ -114,11 +114,8 @@ impl<'words> Solver<'words> {
         // I don't get why David is popping from the front ("shift?" in his code) and I don't
         // want to change it.
         let encrypted_words = {
-            let mut encrypted_words: Vec<_> = phrase.as_ref().split_whitespace().collect();
-            encrypted_words.sort();
-            encrypted_words.dedup();
-            encrypted_words.sort_by_key(|word| word.len());
-            encrypted_words.into()
+            let mut encrypted_words: FxHashSet<_> = phrase.as_ref().split_whitespace().collect();
+            encrypted_words.into_iter().collect()
         };
 
         let letter_mappings = self.guess(FxHashMap::default(), &encrypted_words);
@@ -137,7 +134,12 @@ impl<'words> Solver<'words> {
         mut mapping: FxHashMap<u8, u8>,
         encrypted_words: &VecDeque<&str>,
     ) -> Vec<FxHashMap<u8, u8>> {
-        let mut encrypted_words = encrypted_words.clone();
+        let mut encrypted_words: VecDeque<_> = {
+            let mut encrypted_words: Vec<_> = encrypted_words.into_iter().cloned().collect();
+            encrypted_words.sort_by_key(|word| self.find_candidate_matches(word, &mapping).len());
+            encrypted_words.into()
+        };
+
         match encrypted_words.pop_front() {
             None => vec![mapping],
             Some(encrypted_word) => {
