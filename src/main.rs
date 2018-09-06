@@ -242,5 +242,6 @@ fn main() {
     solutions
         .iter()
         .for_each(|solution| println!("{}", solution));
+        
     println!("Elapsed: {:?}", elapsed);
 }
