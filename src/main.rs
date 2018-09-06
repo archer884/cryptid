@@ -131,12 +131,12 @@ impl<'words> Solver<'words> {
     ) -> Vec<FxHashMap<u8, u8>> {
         use std::cmp::Reverse;
 
-        let mut encrypted_words: Vec<_> = encrypted_words.into_iter()
+        let mut encrypted_words: Vec<_> = encrypted_words
+            .into_iter()
             .map(|word| {
                 let candidate_matches = self.find_candidate_matches(word.as_ref(), &mapping);
                 (word, candidate_matches)
-            })
-            .collect();
+            }).collect();
 
         encrypted_words.sort_by_key(|pair| Reverse(pair.1.len()));
 
@@ -146,12 +146,16 @@ impl<'words> Solver<'words> {
                 let mut candidate_mappings = FxHashMap::default();
 
                 for &word in &candidate_words {
-                    if let Some(mapping) = self.try_extend_mapping(word, encrypted_word.as_ref(), &mapping) {
+                    if let Some(mapping) =
+                        self.try_extend_mapping(word, encrypted_word.as_ref(), &mapping)
+                    {
                         candidate_mappings.insert(word, mapping);
                     }
                 }
 
-                let encrypted_words: Vec<_> = encrypted_words.iter().map(|&(&word, _)| word).collect();
+                let encrypted_words: Vec<_> =
+                    encrypted_words.iter().map(|&(&word, _)| word).collect();
+                    
                 candidate_mappings
                     .into_iter()
                     .flat_map(move |(_, mapping)| self.guess(mapping, &encrypted_words))
