@@ -108,11 +108,8 @@ impl<'words> Solver<'words> {
     fn solve<'a>(&self, phrase: &'a Phrase) -> impl Iterator<Item = String> + 'a {
         // FIXME: this part is only going to work for "properly" formatted cryptograms--which is
         // to say the kind that don't have punctuation or other non-letter characters.
-        let encrypted_words = {
-            let mut encrypted_words: FxHashSet<_> = phrase.as_ref().split_whitespace().collect();
-            encrypted_words.into_iter().collect()
-        };
-
+        let encrypted_words: FxHashSet<_> = phrase.as_ref().split_whitespace().collect();
+        let encrypted_words: Vec<_> = encrypted_words.into_iter().collect();
         let letter_mappings = self.guess(FxHashMap::default(), &encrypted_words);
 
         letter_mappings.into_iter().map(move |mapping| {
@@ -129,27 +126,32 @@ impl<'words> Solver<'words> {
     // minor degree. >.>
     fn guess(
         &self,
-        mut mapping: FxHashMap<u8, u8>,
-        encrypted_words: &Vec<&str>,
+        mapping: FxHashMap<u8, u8>,
+        encrypted_words: &[&str],
     ) -> Vec<FxHashMap<u8, u8>> {
         use std::cmp::Reverse;
 
-        let mut encrypted_words: Vec<_> = encrypted_words.into_iter().cloned().collect();
-        encrypted_words
-            .sort_by_key(|word| Reverse(self.find_candidate_matches(word, &mapping).len()));
+        let mut encrypted_words: Vec<_> = encrypted_words.into_iter()
+            .map(|word| {
+                let candidate_matches = self.find_candidate_matches(word.as_ref(), &mapping);
+                (word, candidate_matches)
+            })
+            .collect();
+
+        encrypted_words.sort_by_key(|pair| Reverse(pair.1.len()));
 
         match encrypted_words.pop() {
             None => vec![mapping],
-            Some(encrypted_word) => {
-                let candidate_words = self.find_candidate_matches(encrypted_word, &mut mapping);
+            Some((encrypted_word, candidate_words)) => {
                 let mut candidate_mappings = FxHashMap::default();
 
                 for &word in &candidate_words {
-                    if let Some(mapping) = self.try_extend_mapping(word, encrypted_word, &mapping) {
+                    if let Some(mapping) = self.try_extend_mapping(word, encrypted_word.as_ref(), &mapping) {
                         candidate_mappings.insert(word, mapping);
                     }
                 }
 
+                let encrypted_words: Vec<_> = encrypted_words.iter().map(|&(&word, _)| word).collect();
                 candidate_mappings
                     .into_iter()
                     .flat_map(move |(_, mapping)| self.guess(mapping, &encrypted_words))
@@ -221,7 +223,6 @@ impl<'words> Solver<'words> {
 
 fn main() {
     use std::env;
-    use std::process;
 
     let phrase = env::args()
         .nth(1)
@@ -242,6 +243,6 @@ fn main() {
     solutions
         .iter()
         .for_each(|solution| println!("{}", solution));
-        
+
     println!("Elapsed: {:?}", elapsed);
 }
