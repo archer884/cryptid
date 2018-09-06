@@ -220,6 +220,15 @@ impl<'words> Solver<'words> {
 
 fn main() {
     use std::env;
+    use std::process;
+
+    let phrase = match env::args().nth(1).and_then(Phrase::from_str) {
+        None => {
+            eprintln!("Provide a phrase, would you?");
+            process::exit(1);
+        }
+        Some(phrase) => phrase,
+    };
 
     // Enable1.txt does not include words like A or I. It may be prefereable to employ a custom
     // word list or, alternatively, /usr/share/dict/words
@@ -228,16 +237,10 @@ fn main() {
         .collect();
 
     let (elapsed, solver) = time!(Solver::from_dictionary(&words));
-    println!("Mapping time: {:?}", elapsed); // ~300 milliseconds
-
-    for phrase in env::args().skip(1).filter_map(Phrase::from_str) {
-        let (elapsed, mut solutions) = time!(solver.solve(&phrase).collect::<Vec<_>>());
-        solutions.sort();
-
-        for solution in solutions {
-            println!("{}", solution);
-        }
-
-        println!("Elapsed: {:?}", elapsed);
-    }
+    println!("Initialize: {:?}", elapsed);
+    
+    let (elapsed, mut solutions) = time!(solver.solve(&phrase).collect::<Vec<_>>());
+    solutions.sort();
+    solutions.iter().for_each(|solution| println!("{}", solution));
+    println!("Elapsed: {:?}", elapsed);
 }
