@@ -134,7 +134,7 @@ impl<'words> Solver<'words> {
         let mut encrypted_words: Vec<_> = encrypted_words
             .into_iter()
             .map(|word| {
-                let candidate_matches = self.find_candidate_matches(word.as_ref(), &mapping);
+                let candidate_matches = self.find_candidate_matches(word, &mapping);
                 (word, candidate_matches)
             }).collect();
 
@@ -146,16 +146,14 @@ impl<'words> Solver<'words> {
                 let mut candidate_mappings = FxHashMap::default();
 
                 for &word in &candidate_words {
-                    if let Some(mapping) =
-                        self.try_extend_mapping(word, encrypted_word.as_ref(), &mapping)
-                    {
+                    if let Some(mapping) = self.try_extend_mapping(word, encrypted_word, &mapping) {
                         candidate_mappings.insert(word, mapping);
                     }
                 }
 
                 let encrypted_words: Vec<_> =
                     encrypted_words.iter().map(|&(&word, _)| word).collect();
-                    
+
                 candidate_mappings
                     .into_iter()
                     .flat_map(move |(_, mapping)| self.guess(mapping, &encrypted_words))
