@@ -105,6 +105,7 @@ impl<'words> Solver<'words> {
             .and_then(|by_char| by_char.get(&u))
     }
 
+    // FIXME: use internal iteration to print solutions as they are discovered.
     fn solve<'a>(&self, phrase: &'a Phrase) -> impl Iterator<Item = String> + 'a {
         // FIXME: this part is only going to work for "properly" formatted cryptograms--which is
         // to say the kind that don't have punctuation or other non-letter characters.
