@@ -125,7 +125,7 @@ impl<'words> Solver<'words> {
     }
 
     // FIXME: in this method, we calculate candidate matches for the target word twice when we
-    // could get away with doing it just once and reduce the amount of work done by some 
+    // could get away with doing it just once and reduce the amount of work done by some
     // minor degree. >.>
     fn guess(
         &self,
@@ -135,7 +135,8 @@ impl<'words> Solver<'words> {
         use std::cmp::Reverse;
 
         let mut encrypted_words: Vec<_> = encrypted_words.into_iter().cloned().collect();
-        encrypted_words.sort_by_key(|word| Reverse(self.find_candidate_matches(word, &mapping).len()));
+        encrypted_words
+            .sort_by_key(|word| Reverse(self.find_candidate_matches(word, &mapping).len()));
 
         match encrypted_words.pop() {
             None => vec![mapping],
@@ -222,13 +223,10 @@ fn main() {
     use std::env;
     use std::process;
 
-    let phrase = match env::args().nth(1).and_then(Phrase::from_str) {
-        None => {
-            eprintln!("Provide a phrase, would you?");
-            process::exit(1);
-        }
-        Some(phrase) => phrase,
-    };
+    let phrase = env::args()
+        .nth(1)
+        .and_then(Phrase::from_str)
+        .expect("Provide a phrase, would you?");
 
     // Enable1.txt does not include words like A or I. It may be prefereable to employ a custom
     // word list or, alternatively, /usr/share/dict/words
@@ -238,9 +236,11 @@ fn main() {
 
     let (elapsed, solver) = time!(Solver::from_dictionary(&words));
     println!("Initialize: {:?}", elapsed);
-    
+
     let (elapsed, mut solutions) = time!(solver.solve(&phrase).collect::<Vec<_>>());
     solutions.sort();
-    solutions.iter().for_each(|solution| println!("{}", solution));
+    solutions
+        .iter()
+        .for_each(|solution| println!("{}", solution));
     println!("Elapsed: {:?}", elapsed);
 }
