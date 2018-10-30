@@ -125,11 +125,7 @@ impl<'words> Solver<'words> {
     // FIXME: in this method, we calculate candidate matches for the target word twice when we
     // could get away with doing it just once and reduce the amount of work done by some
     // minor degree. >.>
-    fn guess(
-        &self,
-        mapping: HashMap<u8, u8>,
-        encrypted_words: &[&str],
-    ) -> Vec<HashMap<u8, u8>> {
+    fn guess(&self, mapping: HashMap<u8, u8>, encrypted_words: &[&str]) -> Vec<HashMap<u8, u8>> {
         use std::cmp::Reverse;
 
         let mut encrypted_words: Vec<_> = encrypted_words
@@ -137,7 +133,8 @@ impl<'words> Solver<'words> {
             .map(|word| {
                 let candidate_matches = self.find_candidate_matches(word, &mapping);
                 (word, candidate_matches)
-            }).collect();
+            })
+            .collect();
 
         encrypted_words.sort_by_key(|pair| Reverse(pair.1.len()));
 
