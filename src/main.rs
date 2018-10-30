@@ -105,24 +105,21 @@ impl<'words> Solver<'words> {
             .and_then(|by_char| by_char.get(&u))
     }
 
-    // FIXME: use internal iteration to print solutions as they are discovered.
-    fn solve<'a>(&self, phrase: &'a Phrase) -> impl Iterator<Item = String> + 'a {
+    fn solve<'a>(&self, phrase: &'a Phrase, mut f: impl FnMut(HashMap<u8, u8>)) {
         // FIXME: this part is only going to work for "properly" formatted cryptograms--which is
         // to say the kind that don't have punctuation or other non-letter characters.
         let encrypted_words: HashSet<_> = phrase.as_ref().split_whitespace().collect();
         let encrypted_words: Vec<_> = encrypted_words.into_iter().collect();
-        let letter_mappings = self.guess(HashMap::new(), &encrypted_words);
 
-        letter_mappings.into_iter().map(move |mapping| {
-            phrase
-                .as_ref()
-                .bytes()
-                .map(|u| mapping.get(&u).map(|&u| u).unwrap_or(u) as char)
-                .collect()
-        })
+        self.guess(HashMap::new(), &encrypted_words, &mut f);
     }
 
-    fn guess(&self, mapping: HashMap<u8, u8>, encrypted_words: &[&str]) -> Vec<HashMap<u8, u8>> {
+    fn guess(
+        &self,
+        mapping: HashMap<u8, u8>,
+        encrypted_words: &[&str],
+        f: &mut impl FnMut(HashMap<u8, u8>),
+    ) {
         use std::cmp::Reverse;
 
         let mut encrypted_words: Vec<_> = encrypted_words
@@ -136,7 +133,7 @@ impl<'words> Solver<'words> {
         encrypted_words.sort_by_key(|pair| Reverse(pair.1.len()));
 
         match encrypted_words.pop() {
-            None => vec![mapping],
+            None => f(mapping),
             Some((encrypted_word, candidate_words)) => {
                 let mut candidate_mappings = HashMap::new();
 
@@ -149,10 +146,9 @@ impl<'words> Solver<'words> {
                 let encrypted_words: Vec<_> =
                     encrypted_words.iter().map(|&(&word, _)| word).collect();
 
-                candidate_mappings
-                    .into_iter()
-                    .flat_map(move |(_, mapping)| self.guess(mapping, &encrypted_words))
-                    .collect()
+                for (_, mapping) in candidate_mappings {
+                    self.guess(mapping, &encrypted_words, f);
+                }
             }
         }
     }
@@ -235,11 +231,17 @@ fn main() {
     let (elapsed, solver) = time!(Solver::from_dictionary(&words));
     println!("Initialize: {:?}", elapsed);
 
-    let (elapsed, mut solutions) = time!(solver.solve(&phrase).collect::<Vec<_>>());
-    solutions.sort();
-    solutions
-        .iter()
-        .for_each(|solution| println!("{}", solution));
+    let (elapsed, ()) = time!(solver.solve(&phrase, |solution| format_solution(&phrase, solution)));
 
     println!("Elapsed: {:?}", elapsed);
+}
+
+fn format_solution(phrase: &Phrase, solution: HashMap<u8, u8>) {
+    let decoded_phrase: String = phrase
+        .as_ref()
+        .bytes()
+        .map(|u| solution.get(&u).map(|&u| u).unwrap_or(u) as char)
+        .collect();
+        
+    println!("{}", decoded_phrase);
 }
