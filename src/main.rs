@@ -1,10 +1,9 @@
 // Reference: https://github.com/davidkellis/cryptogram/blob/master/src/cryptogram.cr
 // David's cryptogram solver.
 
-extern crate hashbrown;
 extern crate stopwatch;
 
-use hashbrown::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 
 macro_rules! time {
     ($e:expr) => {{
