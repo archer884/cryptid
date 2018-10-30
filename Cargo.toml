@@ -4,5 +4,5 @@ version = "0.1.0"
 authors = ["J/A <archer884@gmail.com>"]
 
 [dependencies]
-fxhash = "0.2"
+hashbrown = "0.1"
 stopwatch = "0.0"

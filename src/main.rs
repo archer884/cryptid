@@ -1,10 +1,10 @@
 // Reference: https://github.com/davidkellis/cryptogram/blob/master/src/cryptogram.cr
 // David's cryptogram solver.
 
-extern crate fxhash;
+extern crate hashbrown;
 extern crate stopwatch;
 
-use fxhash::{FxHashMap, FxHashSet};
+use hashbrown::{HashMap, HashSet};
 
 macro_rules! time {
     ($e:expr) => {{
@@ -46,7 +46,7 @@ impl Pattern {
     fn from_str(s: &str) -> Self {
         let mut next_symbol = 0;
         let mut symbols = Vec::new();
-        let mut symbol_map = FxHashMap::default();
+        let mut symbol_map = HashMap::new();
 
         for u in s.bytes() {
             symbols.push(*symbol_map.entry(u).or_insert_with(|| {
@@ -62,8 +62,8 @@ impl Pattern {
 
 #[derive(Debug, Default)]
 struct Solver<'words> {
-    words_by_pattern: FxHashMap<Pattern, FxHashSet<&'words str>>,
-    words_by_character_and_index: FxHashMap<usize, FxHashMap<u8, FxHashSet<&'words str>>>,
+    words_by_pattern: HashMap<Pattern, HashSet<&'words str>>,
+    words_by_character_and_index: HashMap<usize, HashMap<u8, HashSet<&'words str>>>,
 }
 
 impl<'words> Solver<'words> {
@@ -91,7 +91,7 @@ impl<'words> Solver<'words> {
         solver
     }
 
-    fn words_by_pattern(&self, word: &str) -> FxHashSet<&'words str> {
+    fn words_by_pattern(&self, word: &str) -> HashSet<&'words str> {
         let pattern = Pattern::from_str(word);
         self.words_by_pattern
             .get(&pattern)
@@ -99,7 +99,7 @@ impl<'words> Solver<'words> {
             .unwrap_or_default()
     }
 
-    fn words_by_character_and_index(&self, u: u8, idx: usize) -> Option<&FxHashSet<&'words str>> {
+    fn words_by_character_and_index(&self, u: u8, idx: usize) -> Option<&HashSet<&'words str>> {
         self.words_by_character_and_index
             .get(&idx)
             .and_then(|by_char| by_char.get(&u))
@@ -109,9 +109,9 @@ impl<'words> Solver<'words> {
     fn solve<'a>(&self, phrase: &'a Phrase) -> impl Iterator<Item = String> + 'a {
         // FIXME: this part is only going to work for "properly" formatted cryptograms--which is
         // to say the kind that don't have punctuation or other non-letter characters.
-        let encrypted_words: FxHashSet<_> = phrase.as_ref().split_whitespace().collect();
+        let encrypted_words: HashSet<_> = phrase.as_ref().split_whitespace().collect();
         let encrypted_words: Vec<_> = encrypted_words.into_iter().collect();
-        let letter_mappings = self.guess(FxHashMap::default(), &encrypted_words);
+        let letter_mappings = self.guess(HashMap::new(), &encrypted_words);
 
         letter_mappings.into_iter().map(move |mapping| {
             phrase
@@ -127,9 +127,9 @@ impl<'words> Solver<'words> {
     // minor degree. >.>
     fn guess(
         &self,
-        mapping: FxHashMap<u8, u8>,
+        mapping: HashMap<u8, u8>,
         encrypted_words: &[&str],
-    ) -> Vec<FxHashMap<u8, u8>> {
+    ) -> Vec<HashMap<u8, u8>> {
         use std::cmp::Reverse;
 
         let mut encrypted_words: Vec<_> = encrypted_words
@@ -144,7 +144,7 @@ impl<'words> Solver<'words> {
         match encrypted_words.pop() {
             None => vec![mapping],
             Some((encrypted_word, candidate_words)) => {
-                let mut candidate_mappings = FxHashMap::default();
+                let mut candidate_mappings = HashMap::new();
 
                 for &word in &candidate_words {
                     if let Some(mapping) = self.try_extend_mapping(word, encrypted_word, &mapping) {
@@ -166,8 +166,8 @@ impl<'words> Solver<'words> {
     fn find_candidate_matches(
         &self,
         word: &str,
-        mapping: &FxHashMap<u8, u8>,
-    ) -> FxHashSet<&'words str> {
+        mapping: &HashMap<u8, u8>,
+    ) -> HashSet<&'words str> {
         let mut candidates = self.words_by_pattern(word);
 
         for (idx, u) in word.bytes().enumerate() {
@@ -187,9 +187,9 @@ impl<'words> Solver<'words> {
         &self,
         word: &str,
         encrypted_word: &str,
-        mapping: &FxHashMap<u8, u8>,
-    ) -> Option<FxHashMap<u8, u8>> {
-        let mut new_mapping = FxHashMap::default();
+        mapping: &HashMap<u8, u8>,
+    ) -> Option<HashMap<u8, u8>> {
+        let mut new_mapping = HashMap::new();
 
         for (u_encoded, u_decoded) in encrypted_word.bytes().zip(word.bytes()) {
             if let Some(&mapped_char) = new_mapping.get(&u_encoded) {
@@ -215,7 +215,7 @@ impl<'words> Solver<'words> {
         });
 
         // Test for mistakenly mapping multiple characters to one character.
-        let value_set: FxHashSet<u8> = new_mapping.values().cloned().collect();
+        let value_set: HashSet<u8> = new_mapping.values().cloned().collect();
         if value_set.len() != new_mapping.len() {
             return None;
         }
