@@ -4,5 +4,5 @@ version = "0.1.0"
 authors = ["J/A <archer884@gmail.com>"]
 
 [dependencies]
-hashbrown = "0.1"
+hashbrown = { version = "0.1", features = ["nightly"] }
 stopwatch = "0.0"

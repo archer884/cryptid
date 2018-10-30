@@ -232,7 +232,7 @@ fn main() {
         .and_then(Phrase::from_str)
         .expect("Provide a phrase, would you?");
 
-    // Enable1.txt does not include words like A or I. It may be prefereable to employ a custom
+    // Enable1.txt does not include words like A or I. It may be preferable to employ a custom
     // word list or, alternatively, /usr/share/dict/words
     let words: Vec<_> = include_str!("../resources/enable1.txt")
         .split_whitespace()
