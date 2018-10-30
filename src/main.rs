@@ -122,9 +122,6 @@ impl<'words> Solver<'words> {
         })
     }
 
-    // FIXME: in this method, we calculate candidate matches for the target word twice when we
-    // could get away with doing it just once and reduce the amount of work done by some
-    // minor degree. >.>
     fn guess(&self, mapping: HashMap<u8, u8>, encrypted_words: &[&str]) -> Vec<HashMap<u8, u8>> {
         use std::cmp::Reverse;
 
