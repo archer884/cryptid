@@ -1,10 +1,8 @@
 // Reference: https://github.com/davidkellis/cryptogram/blob/master/src/cryptogram.cr
 // David's cryptogram solver.
 
-extern crate hashbrown;
-extern crate stopwatch;
-
-use hashbrown::{HashMap, HashSet};
+// use hashbrown::{HashMap, HashSet};
+use fxhash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
 macro_rules! time {
     ($e:expr) => {{
@@ -46,7 +44,7 @@ impl Pattern {
     fn from_str(s: &str) -> Self {
         let mut next_symbol = 0;
         let mut symbols = Vec::new();
-        let mut symbol_map = HashMap::new();
+        let mut symbol_map = HashMap::default();
 
         for u in s.bytes() {
             symbols.push(*symbol_map.entry(u).or_insert_with(|| {
@@ -111,7 +109,7 @@ impl<'words> Solver<'words> {
         // to say the kind that don't have punctuation or other non-letter characters.
         let encrypted_words: HashSet<_> = phrase.as_ref().split_whitespace().collect();
         let encrypted_words: Vec<_> = encrypted_words.into_iter().collect();
-        let letter_mappings = self.guess(HashMap::new(), &encrypted_words);
+        let letter_mappings = self.guess(HashMap::default(), &encrypted_words);
 
         letter_mappings.into_iter().map(move |mapping| {
             phrase
@@ -138,7 +136,7 @@ impl<'words> Solver<'words> {
         match encrypted_words.pop() {
             None => vec![mapping],
             Some((encrypted_word, candidate_words)) => {
-                let mut candidate_mappings = HashMap::new();
+                let mut candidate_mappings = HashMap::default();
 
                 for &word in &candidate_words {
                     if let Some(mapping) = self.try_extend_mapping(word, encrypted_word, &mapping) {
@@ -183,7 +181,7 @@ impl<'words> Solver<'words> {
         encrypted_word: &str,
         mapping: &HashMap<u8, u8>,
     ) -> Option<HashMap<u8, u8>> {
-        let mut new_mapping = HashMap::new();
+        let mut new_mapping = HashMap::default();
 
         for (u_encoded, u_decoded) in encrypted_word.bytes().zip(word.bytes()) {
             if let Some(&mapped_char) = new_mapping.get(&u_encoded) {
@@ -228,7 +226,7 @@ fn main() {
 
     // Enable1.txt does not include words like A or I. It may be preferable to employ a custom
     // word list or, alternatively, /usr/share/dict/words
-    let words: Vec<_> = include_str!("../resources/enable1.txt")
+    let words: Vec<_> = include_str!("../resources/enable1-modified.txt")
         .split_whitespace()
         .collect();
 
