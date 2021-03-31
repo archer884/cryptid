@@ -2,7 +2,8 @@
 name = "cryptid"
 version = "0.1.0"
 authors = ["J/A <archer884@gmail.com>"]
+edition = "2018"
 
 [dependencies]
-hashbrown = "0.9.1"
+hashbrown = "0.11.2"
 stopwatch = "0.0.7"

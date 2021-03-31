@@ -1,9 +1,6 @@
 // Reference: https://github.com/davidkellis/cryptogram/blob/master/src/cryptogram.cr
 // David's cryptogram solver.
 
-extern crate hashbrown;
-extern crate stopwatch;
-
 use hashbrown::{HashMap, HashSet};
 
 macro_rules! time {
@@ -95,7 +92,7 @@ impl<'words> Solver<'words> {
         let pattern = Pattern::from_str(word);
         self.words_by_pattern
             .get(&pattern)
-            .map(|x| x.clone())
+            .cloned()
             .unwrap_or_default()
     }
 
@@ -117,7 +114,7 @@ impl<'words> Solver<'words> {
             phrase
                 .as_ref()
                 .bytes()
-                .map(|u| mapping.get(&u).map(|&u| u).unwrap_or(u) as char)
+                .map(|u| mapping.get(&u).copied().unwrap_or(u) as char)
                 .collect()
         })
     }
@@ -126,7 +123,7 @@ impl<'words> Solver<'words> {
         use std::cmp::Reverse;
 
         let mut encrypted_words: Vec<_> = encrypted_words
-            .into_iter()
+            .iter()
             .map(|word| {
                 let candidate_matches = self.find_candidate_matches(word, &mapping);
                 (word, candidate_matches)
